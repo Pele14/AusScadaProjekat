@@ -25,7 +25,7 @@ namespace Modbus
 					return new ReadDiscreteInputsFunction(commandParameters);
 
 				case ModbusFunctionCode.READ_INPUT_REGISTERS:
-					return new ReadInputRegistersFunction(commandParameters);
+					//return new ReadInputRegistersFunction(commandParameters);
 
 				case ModbusFunctionCode.READ_HOLDING_REGISTERS:
 					return new ReadHoldingRegistersFunction(commandParameters);
