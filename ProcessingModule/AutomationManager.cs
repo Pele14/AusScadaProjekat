@@ -1,6 +1,7 @@
-﻿using Common;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
+using Common;
 
 namespace ProcessingModule
 {
@@ -60,10 +61,61 @@ namespace ProcessingModule
 
 		private void AutomationWorker_DoWork()
 		{
-			//while (!disposedValue)
-			//{
-			//}
-		}
+            EGUConverter eguConverter = new EGUConverter();
+            PointIdentifier digitalOut = new PointIdentifier(PointType.DIGITAL_OUTPUT, 3000);
+            PointIdentifier digitalOut2 = new PointIdentifier(PointType.DIGITAL_OUTPUT, 3001);
+            PointIdentifier analogOut = new PointIdentifier(PointType.ANALOG_OUTPUT, 1000);
+            PointIdentifier digitalIn = new PointIdentifier(PointType.DIGITAL_INPUT, 2000);
+            List<PointIdentifier> pointsToRead = new List<PointIdentifier> { analogOut, digitalIn, digitalOut, digitalOut2 };
+            
+                while (!disposedValue)
+                {
+                    List<IPoint> points = storage.GetPoints(pointsToRead);
+                    int initValue = (int)eguConverter.ConvertToEGU(points[0].ConfigItem.ScaleFactor, points[0].ConfigItem.Deviation, points[0].RawValue);
+                    int value = initValue;
+
+                    if (points[3].RawValue == 1)
+                    {
+
+
+                        value -= 10;
+
+
+
+                    }
+                    if (points[2].RawValue == 1)
+                    {
+
+                        value += 10;
+
+                    }
+
+                    if (value > 600) // otvaranje
+                    {
+
+                        processingManager.ExecuteWriteCommand(points[2].ConfigItem, configuration.GetTransactionId(), configuration.UnitAddress, 3000, 0);
+                    }
+                    if (value < 20)//zatvaranje
+                    {
+
+                        processingManager.ExecuteWriteCommand(points[3].ConfigItem, configuration.GetTransactionId(), configuration.UnitAddress, 3001, 0);
+                    }
+                    if (value != initValue)
+                    {
+                        int raw = (int)eguConverter.ConvertToRaw(points[0].ConfigItem.ScaleFactor, points[0].ConfigItem.Deviation, value);
+                        processingManager.ExecuteWriteCommand(points[0].ConfigItem, configuration.GetTransactionId(), configuration.UnitAddress, 1000, raw);
+                    }
+                    if (disposedValue)
+                    {
+                        break;
+                    }
+
+                    automationTrigger.WaitOne(delayBetweenCommands);
+
+
+
+                }
+            }
 
 		#region IDisposable Support
 		private bool disposedValue = false; // To detect redundant calls
