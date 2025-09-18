@@ -34,11 +34,18 @@ namespace ProcessingModule
         /// <inheritdoc />
         public void ExecuteReadCommand(IConfigItem configItem, ushort transactionId, byte remoteUnitAddress, ushort startAddress, ushort numberOfPoints)
         {
-            ModbusReadCommandParameters p = new ModbusReadCommandParameters(6, (byte)GetReadFunctionCode(configItem.RegistryType), startAddress, numberOfPoints, transactionId, remoteUnitAddress);
-            IModbusFunction fn = FunctionFactory.CreateModbusFunction(p);
-            this.functionExecutor.EnqueueCommand(fn);
+            try
+            {
+                ModbusReadCommandParameters p = new ModbusReadCommandParameters(6, (byte)GetReadFunctionCode(configItem.RegistryType), startAddress, numberOfPoints, transactionId, remoteUnitAddress);
+                IModbusFunction fn = FunctionFactory.CreateModbusFunction(p);
+                this.functionExecutor.EnqueueCommand(fn);
+            }
+            catch (System.Net.Sockets.SocketException ex)
+            {
+                Console.WriteLine($"[ERROR] ExecuteReadCommand: {ex.Message}");
+            }
         }
-        
+
         /// <inheritdoc />
         public void ExecuteWriteCommand(IConfigItem configItem, ushort transactionId, byte remoteUnitAddress, ushort pointAddress, int value)
         {
@@ -62,7 +69,8 @@ namespace ProcessingModule
         /// <param name="value">The value.</param>
         private void ExecuteDigitalCommand(IConfigItem configItem, ushort transactionId, byte remoteUnitAddress, ushort pointAddress, int value)
         {
-            ModbusWriteCommandParameters p = new ModbusWriteCommandParameters(6, (byte)ModbusFunctionCode.WRITE_SINGLE_COIL, pointAddress, (ushort)value, transactionId, remoteUnitAddress);
+            ushort coilValue = (value == 0) ? (ushort)0x0000 : (ushort)0xFF00;
+            ModbusWriteCommandParameters p = new ModbusWriteCommandParameters(6, (byte)ModbusFunctionCode.WRITE_SINGLE_COIL, pointAddress, coilValue, transactionId, remoteUnitAddress);
             IModbusFunction fn = FunctionFactory.CreateModbusFunction(p);
             this.functionExecutor.EnqueueCommand(fn);
         }
@@ -77,7 +85,8 @@ namespace ProcessingModule
         /// <param name="value">The value.</param>
         private void ExecuteAnalogCommand(IConfigItem configItem, ushort transactionId, byte remoteUnitAddress, ushort pointAddress, int value)
         {
-            ModbusWriteCommandParameters p = new ModbusWriteCommandParameters(6, (byte)ModbusFunctionCode.WRITE_SINGLE_REGISTER, pointAddress, (ushort)value, transactionId, remoteUnitAddress);
+            ushort rawValue = eguConverter.ConvertToRaw(configItem.ScaleFactor, configItem.Deviation, value);
+            ModbusWriteCommandParameters p = new ModbusWriteCommandParameters(6, (byte)ModbusFunctionCode.WRITE_SINGLE_REGISTER, pointAddress, rawValue, transactionId, remoteUnitAddress);
             IModbusFunction fn = FunctionFactory.CreateModbusFunction(p);
             this.functionExecutor.EnqueueCommand(fn);
         }
@@ -109,7 +118,13 @@ namespace ProcessingModule
         private void CommandExecutor_UpdatePointEvent(PointType type, ushort pointAddress, ushort newValue)
         {
             List<IPoint> points = storage.GetPoints(new List<PointIdentifier>(1) { new PointIdentifier(type, pointAddress) });
-            
+
+            if (points == null || points.Count == 0)
+            {
+                Console.WriteLine($"[ERROR] Nema pointa za type={type}, addr={pointAddress}");
+                return;
+            }
+
             if (type == PointType.ANALOG_INPUT || type == PointType.ANALOG_OUTPUT)
             {
                 ProcessAnalogPoint(points.First() as IAnalogPoint, newValue);
@@ -130,7 +145,7 @@ namespace ProcessingModule
             point.RawValue = newValue;
             point.Timestamp = DateTime.Now;
             point.State = (DState)newValue;
-
+            point.Alarm = alarmProcessor.GetAlarmForDigitalPoint(point.RawValue, point.ConfigItem);
         }
 
         /// <summary>
@@ -142,6 +157,8 @@ namespace ProcessingModule
         {
             point.RawValue = newValue;
             point.Timestamp = DateTime.Now;
+            point.EguValue = eguConverter.ConvertToEGU(point.ConfigItem.ScaleFactor, point.ConfigItem.Deviation, point.RawValue);
+            point.Alarm = alarmProcessor.GetAlarmForAnalogPoint(point.EguValue, point.ConfigItem);
         }
 
         /// <inheritdoc />
