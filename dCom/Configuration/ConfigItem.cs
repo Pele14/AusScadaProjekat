@@ -296,7 +296,7 @@ namespace dCom.Configuration
             }
             if (configurationParameters[10].Equals("#"))
             {
-                scalingFactor = 1.0;
+                scalingFactor = 1;
             }
             else
             {
@@ -308,7 +308,7 @@ namespace dCom.Configuration
             if (configurationParameters[11].Equals("#"))
             {
 
-                deviation = 0.0;
+                deviation = 0;
             }
             else
             {
@@ -319,7 +319,7 @@ namespace dCom.Configuration
             // EGU max
             if (configurationParameters[12].Equals("#"))
             {
-                egu_max = 1.0;
+                egu_max = 1;
             }
             else
             {
@@ -351,7 +351,7 @@ namespace dCom.Configuration
             if (configurationParameters[15].Equals("#"))
             {
 
-                highLimit = 0.0;
+                highLimit = 0;
             }
             else
             {

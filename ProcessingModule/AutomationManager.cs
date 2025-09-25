@@ -70,7 +70,7 @@ namespace ProcessingModule
             
                 while (!disposedValue)
                 {
-                    List<IPoint> points = storage.GetPoints(pointsToRead);
+                    List<IPoint> points = storage.GetPoints(pointsToRead); //mrtva petlja
                     int initValue = (int)eguConverter.ConvertToEGU(points[0].ConfigItem.ScaleFactor, points[0].ConfigItem.Deviation, points[0].RawValue);
                     int value = initValue;
 
@@ -102,8 +102,8 @@ namespace ProcessingModule
                     }
                     if (value != initValue)
                     {
-                        int raw = (int)eguConverter.ConvertToRaw(points[0].ConfigItem.ScaleFactor, points[0].ConfigItem.Deviation, value);
-                        processingManager.ExecuteWriteCommand(points[0].ConfigItem, configuration.GetTransactionId(), configuration.UnitAddress, 1000, raw);
+                        
+                        processingManager.ExecuteWriteCommand(points[0].ConfigItem, configuration.GetTransactionId(), configuration.UnitAddress, 1000, value);
                     }
                     if (disposedValue)
                     {

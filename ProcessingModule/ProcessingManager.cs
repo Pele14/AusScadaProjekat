@@ -69,8 +69,8 @@ namespace ProcessingModule
         /// <param name="value">The value.</param>
         private void ExecuteDigitalCommand(IConfigItem configItem, ushort transactionId, byte remoteUnitAddress, ushort pointAddress, int value)
         {
-            ushort coilValue = (value == 0) ? (ushort)0x0000 : (ushort)0xFF00;
-            ModbusWriteCommandParameters p = new ModbusWriteCommandParameters(6, (byte)ModbusFunctionCode.WRITE_SINGLE_COIL, pointAddress, coilValue, transactionId, remoteUnitAddress);
+            
+            ModbusWriteCommandParameters p = new ModbusWriteCommandParameters(6, (byte)ModbusFunctionCode.WRITE_SINGLE_COIL, pointAddress, (ushort)value, transactionId, remoteUnitAddress);
             IModbusFunction fn = FunctionFactory.CreateModbusFunction(p);
             this.functionExecutor.EnqueueCommand(fn);
         }
@@ -119,11 +119,7 @@ namespace ProcessingModule
         {
             List<IPoint> points = storage.GetPoints(new List<PointIdentifier>(1) { new PointIdentifier(type, pointAddress) });
 
-            if (points == null || points.Count == 0)
-            {
-                Console.WriteLine($"[ERROR] Nema pointa za type={type}, addr={pointAddress}");
-                return;
-            }
+            
 
             if (type == PointType.ANALOG_INPUT || type == PointType.ANALOG_OUTPUT)
             {
@@ -157,7 +153,7 @@ namespace ProcessingModule
         {
             point.RawValue = newValue;
             point.Timestamp = DateTime.Now;
-            point.EguValue = eguConverter.ConvertToEGU(point.ConfigItem.ScaleFactor, point.ConfigItem.Deviation, point.RawValue);
+            point.EguValue = eguConverter.ConvertToEGU(point.ConfigItem.ScaleFactor, point.ConfigItem.Deviation, newValue);
             point.Alarm = alarmProcessor.GetAlarmForAnalogPoint(point.EguValue, point.ConfigItem);
         }
 
